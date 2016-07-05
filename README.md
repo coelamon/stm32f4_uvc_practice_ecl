@@ -17,4 +17,6 @@ OpenOCD
 
 Microcontroller: STM32F407VET6
 
+My board has LED on PA7 pin
+
 Programmer: ST-LINK V2
