@@ -153,18 +153,6 @@
  }
  USBD_UVC_HandleTypeDef;
 
-#define UVC_LOG_UNKNOWN 0
-#define UVC_LOG_SETUP   1
-#define UVC_LOG_DATAIN  2
-#define UVC_LOG_GET_CUR 3
-#define UVC_LOG_SET_CUR 4
-#define UVC_LOG_USR_STR 5
-
-typedef struct {
-  uint32_t messageid;
-  USBD_SetupReqTypedef *req;
-} USBD_UVC_LogRecordTypeDef;
-
 #define UVC_USR_STR_CONFIG 0x11
 #define UVC_USR_STR_IAD 0x12
 #define UVC_USR_STR_VC_ITF 0x13

@@ -21,24 +21,13 @@ uint8_t  USBD_UVC_DataOut (USBD_HandleTypeDef *pdev,
 
 uint8_t  USBD_UVC_SOF (USBD_HandleTypeDef *pdev);
 
-uint8_t  *USBD_UVC_GetHSCfgDesc (uint16_t *length);
-
 uint8_t  *USBD_UVC_GetFSCfgDesc (uint16_t *length);
-
-uint8_t  *USBD_UVC_GetOtherSpeedCfgDesc (uint16_t *length);
-
-uint8_t  *USBD_UVC_GetDeviceQualifierDescriptor (uint16_t *length);
 
 uint8_t  *USBD_UVC_GetUsrStrDescriptor(USBD_HandleTypeDef *pdev ,uint8_t index,  uint16_t *length);
 
-USBD_UVC_LogRecordTypeDef *log_first = NULL;
-USBD_UVC_LogRecordTypeDef *log_last  = NULL;
-USBD_UVC_LogRecordTypeDef log[100];
-uint32_t log_count = 0;
-uint32_t log_sof_count = 0;
-uint32_t log_ep0_rxready_count = 0;
-uint32_t log_datain_count = 0;
-uint32_t log_dataout_count = 0;
+void UVC_Req_GetCurrent(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+
+void UVC_Req_SetCurrent(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
 
 __ALIGN_BEGIN uint8_t USBD_UVC_StrDesc[USBD_MAX_STR_DESC_SIZ] __ALIGN_END;
 
@@ -262,43 +251,6 @@ VideoControl    videoProbeControl =
   {0x00},                           // bMaxVersion
 };
 
-USBD_UVC_LogRecordTypeDef* USBD_UVC_LogMessage(uint32_t messageid)
-{
-	if (log_count >= 100)
-	{
-		return NULL;
-	}
-	if (log_first == NULL)
-	{
-		log_first = &log[0];
-		log_last = &log[0];
-		log_count = 1;
-	}
-	else
-	{
-		log_last = &log[log_count];
-		log_count++;
-	}
-	log_last->messageid = messageid;
-	log_last->req = NULL;
-	return log_last;
-}
-
-void USBD_UVC_LogSetupMessage(USBD_SetupReqTypedef *req)
-{
-	USBD_UVC_LogRecordTypeDef *log_record = USBD_UVC_LogMessage(UVC_LOG_SETUP);
-	if (log_record == NULL)
-	{
-		return;
-	}
-	log_record->req = USBD_malloc(sizeof(USBD_SetupReqTypedef));
-	log_record->req->bmRequest = req->bmRequest;
-	log_record->req->bRequest = req->bRequest;
-	log_record->req->wValue = req->wValue;
-	log_record->req->wIndex = req->wIndex;
-	log_record->req->wLength = req->wLength;
-}
-
 uint8_t  USBD_UVC_Init (USBD_HandleTypeDef *pdev,
                         uint8_t cfgidx)
 {
@@ -369,8 +321,6 @@ uint8_t  USBD_UVC_Setup (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
   USBD_UVC_HandleTypeDef *huvc = (USBD_UVC_HandleTypeDef*) pdev->pClassData;
 
-  USBD_UVC_LogSetupMessage(req);
-
   switch (req->bmRequest & USB_REQ_TYPE_MASK)
   {
 
@@ -431,7 +381,6 @@ uint8_t  USBD_UVC_Setup (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 
 uint8_t  USBD_UVC_EP0_RxReady (USBD_HandleTypeDef *pdev)
 {
-  log_ep0_rxready_count++;
   return USBD_OK;
 }
 
@@ -439,8 +388,6 @@ uint8_t  USBD_UVC_DataIn (USBD_HandleTypeDef *pdev,
                           uint8_t epnum)
 {
   USBD_UVC_HandleTypeDef *huvc = (USBD_UVC_HandleTypeDef*) pdev->pClassData;
-
-  log_datain_count++;
 
   USBD_LL_FlushEP(pdev, USB_ENDPOINT_IN(1));
 
@@ -481,8 +428,6 @@ uint8_t  USBD_UVC_DataIn (USBD_HandleTypeDef *pdev,
 uint8_t  USBD_UVC_DataOut (USBD_HandleTypeDef *pdev,
                            uint8_t epnum)
 {
-  log_dataout_count++;
-
   return USBD_OK;
 }
 
@@ -496,8 +441,6 @@ uint8_t  USBD_UVC_SOF (USBD_HandleTypeDef *pdev)
 {
   USBD_UVC_HandleTypeDef *huvc = (USBD_UVC_HandleTypeDef*) pdev->pClassData;
 
-  log_sof_count++;
-
   if (huvc->play_status == 1)
   {
 	//USBD_LL_FlushEP (pdev, USB_ENDPOINT_IN(1));
@@ -509,8 +452,6 @@ uint8_t  USBD_UVC_SOF (USBD_HandleTypeDef *pdev)
 
 uint8_t  *USBD_UVC_GetUsrStrDescriptor(USBD_HandleTypeDef *pdev ,uint8_t index,  uint16_t *length)
 {
-  USBD_UVC_LogMessage(UVC_LOG_USR_STR);
-
   switch (index)
   {
   case UVC_USR_STR_IAD:
@@ -526,7 +467,6 @@ uint8_t  *USBD_UVC_GetUsrStrDescriptor(USBD_HandleTypeDef *pdev ,uint8_t index, 
 void UVC_Req_GetCurrent(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
   /* Send the current mute state */
-  USBD_UVC_LogMessage(UVC_LOG_GET_CUR);
 
   //USBD_LL_FlushEP (pdev, USB_ENDPOINT_OUT(0)); // ???
 
@@ -544,7 +484,6 @@ void UVC_Req_GetCurrent(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 
 void UVC_Req_SetCurrent(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
-  USBD_UVC_LogMessage(UVC_LOG_SET_CUR);
   if (req->wLength)
   {
     /* Prepare the reception of the buffer over EP0 */

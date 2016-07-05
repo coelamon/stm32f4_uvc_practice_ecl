@@ -42,13 +42,6 @@
 * @{
 */
 
-typedef struct {
-	uint8_t *msg;
-	uint8_t epnum;
-	USBD_SetupReqTypedef setup_req;
-}
-USBD_LogTypedef;
-
 /**
 * @}
 */ 
@@ -85,10 +78,6 @@ USBD_LogTypedef;
 * @{
 */ 
 
-uint32_t usbd_log_count = 0;
-uint32_t usbd_log_max = 100;
-USBD_LogTypedef usbd_log[100];
-
 /**
 * @}
 */ 
@@ -96,38 +85,6 @@ USBD_LogTypedef usbd_log[100];
 /** @defgroup USBD_CORE_Private_Functions
 * @{
 */ 
-
-USBD_LogTypedef* USBD_LL_Log(uint8_t *msg)
-{
-	if (usbd_log_count >= usbd_log_max)
-	{
-		return NULL;
-	}
-	usbd_log_count++;
-	USBD_LogTypedef *log = &usbd_log[usbd_log_count-1];
-	log->msg = msg;
-	return log;
-}
-
-void USBD_LL_LogSetupRequest(USBD_SetupReqTypedef *req)
-{
-	USBD_LogTypedef *log = USBD_LL_Log("SETUP");
-	if (log == NULL)
-	{
-		return;
-	}
-	log->setup_req = *req;
-}
-
-void USBD_LL_LogDataInOut(uint8_t *msg, uint8_t epnum)
-{
-	USBD_LogTypedef *log = USBD_LL_Log(msg);
-	if (log == NULL)
-	{
-		return;
-	}
-	log->epnum = epnum;
-}
 
 /**
 * @brief  USBD_Init
@@ -346,11 +303,6 @@ USBD_StatusTypeDef USBD_LL_DataOutStage(USBD_HandleTypeDef *pdev , uint8_t epnum
 {
   USBD_EndpointTypeDef    *pep;
   
-  if (epnum != 0)
-  {
-    USBD_LL_LogDataInOut("OUT", epnum);
-  }
-
   if(epnum == 0) 
   {
     pep = &pdev->ep_out[0];
@@ -394,11 +346,6 @@ USBD_StatusTypeDef USBD_LL_DataOutStage(USBD_HandleTypeDef *pdev , uint8_t epnum
 USBD_StatusTypeDef USBD_LL_DataInStage(USBD_HandleTypeDef *pdev ,uint8_t epnum, uint8_t *pdata)
 {
   USBD_EndpointTypeDef    *pep;
-
-  if (epnum != 0)
-  {
-    USBD_LL_LogDataInOut("IN", epnum);
-  }
 
   if(epnum == 0) 
   {
